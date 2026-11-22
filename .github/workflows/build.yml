@@ -1,1 +1,51 @@
+name: Build Kernarium IPA
 
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up tools
+        run: |
+          brew install cmake ninja
+          pip3 install --upgrade pip
+
+      - name: Prepare dependencies
+        run: |
+          chmod +x dependencies/prepare.sh
+          ./dependencies/prepare.sh || true
+
+      - name: Build Kernarium with Xcode
+        run: |
+          cd Kernarium
+          xcodebuild -project Kernarium.xcodeproj \
+            -scheme Kernarium \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package to IPA
+        run: |
+          mkdir -p build/Payload
+          # Копируем скомпилированный .app в Payload
+          cp -r $(find ~/Library/Developer/Xcode/DerivedData -name "Kernarium.app" | head -n 1) build/Payload/
+          cd build
+          zip -r Kernarium-unsigned.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kernarium-unsigned-ipa
+          path: build/Kernarium-unsigned.ipa
