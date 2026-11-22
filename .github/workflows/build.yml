@@ -2,10 +2,12 @@ name: Build Kernarium IPA
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-13 # <--- Заменено с macos-14 на macos-13
 
     steps:
       - name: Checkout repository
@@ -23,6 +25,11 @@ jobs:
           chmod +x dependencies/prepare.sh
           ./dependencies/prepare.sh || true
 
+      - name: Package iOS Frameworks
+        run: |
+          chmod +x Kernarium/scripts/package-ios-frameworks.sh
+          ./Kernarium/scripts/package-ios-frameworks.sh --sdk device || true
+
       - name: Build Kernarium with Xcode
         run: |
           cd Kernarium
@@ -39,7 +46,6 @@ jobs:
       - name: Package to IPA
         run: |
           mkdir -p build/Payload
-          # Копируем скомпилированный .app в Payload
           cp -r $(find ~/Library/Developer/Xcode/DerivedData -name "Kernarium.app" | head -n 1) build/Payload/
           cd build
           zip -r Kernarium-unsigned.ipa Payload
