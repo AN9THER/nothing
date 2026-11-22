@@ -15,10 +15,9 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up tools
+      - name: Configure Dummy Signing
         run: |
-          brew install cmake ninja
-          pip3 install --upgrade pip
+          cp GuestHost/Config/Signing.local.xcconfig.example GuestHost/Config/Signing.local.xcconfig
 
       - name: Prepare dependencies
         run: |
@@ -46,9 +45,15 @@ jobs:
       - name: Package to IPA
         run: |
           mkdir -p build/Payload
-          cp -r $(find ~/Library/Developer/Xcode/DerivedData -name "Kernarium.app" | head -n 1) build/Payload/
-          cd build
-          zip -r Kernarium-unsigned.ipa Payload
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Kernarium.app" | head -n 1)
+          if [ -n "$APP_PATH" ]; then
+            cp -r "$APP_PATH" build/Payload/
+            cd build
+            zip -r Kernarium-unsigned.ipa Payload
+          else
+            echo "Kernarium.app was not produced by Xcode build!"
+            exit 1
+          fi
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
